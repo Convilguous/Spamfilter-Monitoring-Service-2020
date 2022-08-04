@@ -71,7 +71,7 @@ namespace MonitoringService
             }
             catch (Exception eee)
             {
-                AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2009282327, true);
+                AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282327, true);
                 if (Environment.MachineName.ToLower() != "yoda") 
                     new Thread(() => TryStarting()) { IsBackground = true }.Start();
             }
@@ -95,7 +95,7 @@ namespace MonitoringService
             }
             catch (Exception eee)
             {
-                AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2101212207, true);
+                AF.LogError(eee, EventLogEntryType.FailureAudit, 2101212207, true);
             }
         }
 
@@ -126,9 +126,9 @@ namespace MonitoringService
                     }
                     break;
                 }
-                catch (Exception eee)
+                catch (Exception)
                 {
-                    AF.SchrijfNaarLog($"Re-trying the intial startup still fails, try #{Retries}", EventLogEntryType.Warning, 2101212138, true);
+                    AF.LogError($"Re-trying the intial startup still fails, try #{Retries}", EventLogEntryType.Warning, 2101212138, true);
                 }
                 Retries++;
             }
@@ -193,11 +193,11 @@ namespace MonitoringService
 
                     if (MailIDOffset == 0)
                     {
-                        AF.SchrijfNaarLog("This server has no row in GeneralSettings table in the main database", EventLogEntryType.Error, 2010032237, true);
+                        AF.LogError("This server has no row in GeneralSettings table in the main database", EventLogEntryType.Error, 2010032237, true);
                     }
                     else if ((SeedValue - 2000000 - MailIDOffset) % 65536 != 0)
                     {
-                        AF.SchrijfNaarLog($"Seedvalue {SeedValue} in GeneralSettings is not a valid value for this server with MailIDOffset {MailIDOffset}", EventLogEntryType.Error, 2010032238, true);
+                        AF.LogError($"Seedvalue {SeedValue} in GeneralSettings is not a valid value for this server with MailIDOffset {MailIDOffset}", EventLogEntryType.Error, 2010032238, true);
                     }
                     else
                     {
@@ -1294,7 +1294,7 @@ namespace MonitoringService
             }
             catch (Exception eee)
             {
-                AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2010032140, true);
+                AF.LogError(eee, EventLogEntryType.FailureAudit, 2010032140, true);
             }
         }
 
@@ -1331,22 +1331,22 @@ namespace MonitoringService
                         {
                             if (!Processen.Contains("forwarding service v6"))
                             { // service stilgevallen, terug opzetten
-                                AF.SchrijfNaarLog("Restarting the Forwarding Service, it was stoppped", EventLogEntryType.Warning, 2009282352, true);
+                                AF.LogError("Restarting the Forwarding Service, it was stoppped", EventLogEntryType.Warning, 2009282352, true);
                                 using (ServiceController serviceControllerForwarding = new ServiceController("ForwardingService"))
                                 {
                                     if (serviceControllerForwarding.Status.ToString().ToLower() != "stopped")
                                     {
                                         serviceControllerForwarding.Stop();
-                                        AF.SchrijfNaarLog("Stop command sent for Forwarding Service", EventLogEntryType.Warning, 2009282353, false);
+                                        AF.LogError("Stop command sent for Forwarding Service", EventLogEntryType.Warning, 2009282353, false);
                                     }
                                     serviceControllerForwarding.Start();
                                 }
-                                AF.SchrijfNaarLog("Start command sent for Forwarding Service", EventLogEntryType.Warning, 2009282354, false);
+                                AF.LogError("Start command sent for Forwarding Service", EventLogEntryType.Warning, 2009282354, false);
                             }
                         }
                         catch (Exception eee)
                         {
-                            AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2009282355, true);
+                            AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282355, true);
                         }
                     }
 
@@ -1380,7 +1380,7 @@ namespace MonitoringService
                                             if (pp.ProcessName.ToLower() == "forwarding service v6")
                                             {
                                                 pp.Kill();
-                                                AF.SchrijfNaarLog("Forwarding Service seems to hang, killing...", EventLogEntryType.FailureAudit, 2009282356, true);
+                                                AF.LogError("Forwarding Service seems to hang, killing...", EventLogEntryType.FailureAudit, 2009282356, true);
                                                 break;
                                             }
                                         }
@@ -1392,34 +1392,34 @@ namespace MonitoringService
 
                         if (!Processen.Contains("forwarding service v6"))
                         { // service stilgevallen, terug opzetten
-                            AF.SchrijfNaarLog("Restarting the Forwarding Service, it was stoppped", EventLogEntryType.Warning, 2009282359, true);
+                            AF.LogError("Restarting the Forwarding Service, it was stoppped", EventLogEntryType.Warning, 2009282359, true);
                             using (ServiceController serviceControllerForwarding = new ServiceController("ForwardingService"))
                             {
                                 if (serviceControllerForwarding.Status.ToString().ToLower() != "stopped")
                                 {
                                     serviceControllerForwarding.Stop();
-                                    AF.SchrijfNaarLog("Stop command sent for Forwarding Service", EventLogEntryType.Warning, 2009282357, false);
+                                    AF.LogError("Stop command sent for Forwarding Service", EventLogEntryType.Warning, 2009282357, false);
                                 }
                                 serviceControllerForwarding.Start();
                             }
-                            AF.SchrijfNaarLog("Start command sent for Forwarding Service", EventLogEntryType.Warning, 2009282358, false);
+                            AF.LogError("Start command sent for Forwarding Service", EventLogEntryType.Warning, 2009282358, false);
                         }
 
                         if (Environment.MachineName.ToLower() == "yoda")
                         {
                             if (!Processen.Contains("sqlagent"))
                             { // service stilgevallen, terug opzetten
-                                AF.SchrijfNaarLog("Restarting the SQL Agent, it was stoppped", EventLogEntryType.Warning, 2009290000, true);
+                                AF.LogError("Restarting the SQL Agent, it was stoppped", EventLogEntryType.Warning, 2009290000, true);
                                 using (ServiceController serviceControllerSQLAgent = new ServiceController("sqlserveragent"))
                                 {
                                     if (serviceControllerSQLAgent.Status.ToString().ToLower() != "stopped")
                                     {
                                         serviceControllerSQLAgent.Stop();
-                                        AF.SchrijfNaarLog("Stop command sent for SQL Agent", EventLogEntryType.Warning, 2009290001, false);
+                                        AF.LogError("Stop command sent for SQL Agent", EventLogEntryType.Warning, 2009290001, false);
                                     }
                                     serviceControllerSQLAgent.Start();
                                 }
-                                AF.SchrijfNaarLog("Start command sent for SQL Agent", EventLogEntryType.Warning, 2009290002, false);
+                                AF.LogError("Start command sent for SQL Agent", EventLogEntryType.Warning, 2009290002, false);
                             }
                         }
 
@@ -1427,29 +1427,29 @@ namespace MonitoringService
                         {
                             if (!Processen.Contains("incoming service v6"))
                             { // service stilgevallen, terug opzetten
-                                AF.SchrijfNaarLog("Restarting the Incoming Service, it was stoppped", EventLogEntryType.Warning, 2009290003, true);
+                                AF.LogError("Restarting the Incoming Service, it was stoppped", EventLogEntryType.Warning, 2009290003, true);
                                 using (ServiceController serviceControllerIncoming = new ServiceController("IncomingService"))
                                 {
                                     if (serviceControllerIncoming.Status.ToString().ToLower() != "stopped")
                                     {
                                         serviceControllerIncoming.Stop();
-                                        AF.SchrijfNaarLog("Stop command sent for Incoming Service", EventLogEntryType.Warning, 2009290004, false);
+                                        AF.LogError("Stop command sent for Incoming Service", EventLogEntryType.Warning, 2009290004, false);
                                     }
                                     serviceControllerIncoming.Start();
                                 }
-                                AF.SchrijfNaarLog("Start command sent for Incoming Service", EventLogEntryType.Warning, 2009290005, false);
+                                AF.LogError("Start command sent for Incoming Service", EventLogEntryType.Warning, 2009290005, false);
                             }
                             else if (IncomingMemoryUsed > (Int64)(12 * 1024) * (Int64)1024 * (Int64)1024)
                             {
                                 StopIncomingService();
-                                AF.SchrijfNaarLog("Stoppnig Incoming Service, more than 12GB in use", EventLogEntryType.Warning, 2009290006, false);
+                                AF.LogError("Stoppnig Incoming Service, more than 12GB in use", EventLogEntryType.Warning, 2009290006, false);
                             }
                         }
                         if (OpenConnecties > 200 && !OpenConnectiesGereageerd)
                         {
                             OpenConnectiesGereageerd = true;
                             StopIncomingService();
-                            AF.SchrijfNaarLog("Restarting Incoming Service, too many unfinished connections", EventLogEntryType.Warning, 2009290008, false);
+                            AF.LogError("Restarting Incoming Service, too many unfinished connections", EventLogEntryType.Warning, 2009290008, false);
                         }
                         else if (OpenConnecties < 200)
                         {
@@ -1461,7 +1461,7 @@ namespace MonitoringService
                             if ((DateTime.UtcNow - CheckLastMailReceived).TotalSeconds > 600)
                             {
                                 StopIncomingService();
-                                AF.SchrijfNaarLog("Restarting Incoming Service, no mail in a long time", EventLogEntryType.Warning, 2010071121, false);
+                                AF.LogError("Restarting Incoming Service, no mail in a long time", EventLogEntryType.Warning, 2010071121, false);
                                 CheckIncomingStarting = true;
                             }
                             else if ((DateTime.UtcNow - CheckLastMailReceived).TotalSeconds > 300)
@@ -1473,7 +1473,7 @@ namespace MonitoringService
                                         using (SmtpClient Server = new SmtpClient("localhost"))
                                         using (MailMessage Message = new MailMessage($"{Environment.MachineName.ToLower()}@spamfilter.be", "internal.test@spamfilter.be", DateTime.UtcNow.ToBinary().ToString(), "Test mail. content unimportant"))
                                         {
-                                            AF.SchrijfNaarLog($"Long time no incoming mails. Sending test mail to internal.test@spamfilter.be from {Environment.MachineName.ToLower()}@spamfilter.be using localhost", 
+                                            AF.LogError($"Long time no incoming mails. Sending test mail to internal.test@spamfilter.be from {Environment.MachineName.ToLower()}@spamfilter.be using localhost", 
                                                 EventLogEntryType.Information, 2012231227, true);
                                             Server.Send(Message);
                                         }
@@ -1481,7 +1481,7 @@ namespace MonitoringService
                                     }
                                     catch (Exception eee)
                                     {
-                                        AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2012022118, true);
+                                        AF.LogError(eee, EventLogEntryType.FailureAudit, 2012022118, true);
                                     }
                                 }
                             }
@@ -1497,7 +1497,7 @@ namespace MonitoringService
                             {
                                 StopForwardingService();
                                 ControleerDoorsturenOp = DateTime.Now.AddMinutes(10);
-                                AF.SchrijfNaarLog("Stopping Forwarding Service, no mails forwarded in over an hour.", EventLogEntryType.Warning, 2010071126, false);
+                                AF.LogError("Stopping Forwarding Service, no mails forwarded in over an hour.", EventLogEntryType.Warning, 2010071126, false);
                                 CheckForwardingStarting = true;
                             }
                             else if ((DateTime.UtcNow - CheckLastMailForwarded).TotalSeconds > 300)
@@ -1509,7 +1509,7 @@ namespace MonitoringService
                                         using (SmtpClient Server = new SmtpClient("localhost"))
                                         using (MailMessage Message = new MailMessage($"{Environment.MachineName.ToLower()}@spamfilter.be", "internal.test@spamfilter.be", DateTime.UtcNow.ToBinary().ToString(), "Test mail. content unimportant"))
                                         {
-                                            AF.SchrijfNaarLog($"Long time no outgoing mails. Sending test mail to internal.test@spamfilter.be from {Environment.MachineName.ToLower()}@spamfilter.be using localhost",
+                                            AF.LogError($"Long time no outgoing mails. Sending test mail to internal.test@spamfilter.be from {Environment.MachineName.ToLower()}@spamfilter.be using localhost",
                                                 EventLogEntryType.Information, 2012231120, true);
                                             Server.Send(Message);
                                         }
@@ -1517,7 +1517,7 @@ namespace MonitoringService
                                     }
                                     catch (Exception eee)
                                     {
-                                        AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2012022117, true);
+                                        AF.LogError(eee, EventLogEntryType.FailureAudit, 2012022117, true);
                                     }
                                 }
                             }
@@ -1529,7 +1529,7 @@ namespace MonitoringService
                     }
                     catch (Exception eee)
                     {
-                        AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2009290009, true);
+                        AF.LogError(eee, EventLogEntryType.FailureAudit, 2009290009, true);
                     }
 
                     if (Environment.MachineName.ToLower() != "yoda")
@@ -1556,13 +1556,13 @@ namespace MonitoringService
 
                                         Process ns = Process.Start(info);
 
-                                        AF.SchrijfNaarLog($"Updated the time using : {info.FileName} {info.Arguments}", EventLogEntryType.Information, 20092333, true);
+                                        AF.LogError($"Updated the time using : {info.FileName} {info.Arguments}", EventLogEntryType.Information, 20092333, true);
                                     }
                                 }
                             }
                             catch (Exception eee)
                             {
-                                AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2009282335, true);
+                                AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282335, true);
                             }
                         }
                     }
@@ -1575,7 +1575,7 @@ namespace MonitoringService
                         }
                         catch (Exception eee)
                         {
-                            AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2009282345, true);
+                            AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282345, true);
                         }
 
                         try
@@ -1584,7 +1584,7 @@ namespace MonitoringService
                         }
                         catch (Exception eee)
                         {
-                            AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2010032127, true);
+                            AF.LogError(eee, EventLogEntryType.FailureAudit, 2010032127, true);
                         }
 
                         try
@@ -1600,13 +1600,13 @@ namespace MonitoringService
                         }
                         catch (Exception eee)
                         {
-                            AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2010032127, true);
+                            AF.LogError(eee, EventLogEntryType.FailureAudit, 2010032127, true);
                         }
                     }
                 }
                 catch (Exception eee)
                 {
-                    AF.SchrijfNaarLog(eee, EventLogEntryType.FailureAudit, 2009282320, true);
+                    AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282320, true);
                 }
 
                 Thread.Sleep(10000);
@@ -1623,7 +1623,7 @@ namespace MonitoringService
                     serviceControllerIncoming.Stop();
                 }
             }
-            catch (Exception eee)
+            catch (Exception)
             {
 
             }
@@ -1635,7 +1635,7 @@ namespace MonitoringService
                 if (pp.ProcessName.ToLower() == "incoming service v6")
                 {
                     pp.Kill();
-                    AF.SchrijfNaarLog("Incoming Service is stuck, killing...", EventLogEntryType.FailureAudit, 2010081446, true);
+                    AF.LogError("Incoming Service is stuck, killing...", EventLogEntryType.FailureAudit, 2010081446, true);
                     break;
                 }
             }
@@ -1650,7 +1650,7 @@ namespace MonitoringService
                     serviceControllerIncoming.Stop();
                 }
             }
-            catch (Exception eee)
+            catch (Exception)
             {
 
             }
@@ -1662,7 +1662,7 @@ namespace MonitoringService
                 if (pp.ProcessName.ToLower() == "forwarding service v6")
                 {
                     pp.Kill();
-                    AF.SchrijfNaarLog("Forwarding Service is stuck, killing...", EventLogEntryType.FailureAudit, 2010081451, true);
+                    AF.LogError("Forwarding Service is stuck, killing...", EventLogEntryType.FailureAudit, 2010081451, true);
                     break;
                 }
             }

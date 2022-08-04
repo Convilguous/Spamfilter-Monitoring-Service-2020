@@ -111,6 +111,30 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_5F4529536C1EC4D27CB836E3C10A62AA"
+        "OwnerKey" = "8:_6343D6B8F4B098A8FEA18C81A474FE74"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_5F4529536C1EC4D27CB836E3C10A62AA"
+        "OwnerKey" = "8:_A8F9E5ACAE5F40E0B9FE9D79810F8EBE"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_5F4529536C1EC4D27CB836E3C10A62AA"
+        "OwnerKey" = "8:_4C47239BF0AF4575A77B22945B3C9E4A"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_5F4529536C1EC4D27CB836E3C10A62AA"
+        "OwnerKey" = "8:_4403E81DFB46433CBD9BF947B627AFA9"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_6343D6B8F4B098A8FEA18C81A474FE74"
         "OwnerKey" = "8:_4403E81DFB46433CBD9BF947B627AFA9"
         "MsmSig" = "8:_UNDEFINED"
@@ -245,6 +269,12 @@
         {
         "MsmKey" = "8:_UNDEFINED"
         "OwnerKey" = "8:_3EEEF9538605DCE0462DA15502957E11"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_UNDEFINED"
+        "OwnerKey" = "8:_5F4529536C1EC4D27CB836E3C10A62AA"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -613,7 +643,7 @@
             {
             "AssemblyRegister" = "3:1"
             "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:zxing, Version=0.16.5.0, Culture=neutral, PublicKeyToken=4e88037ac681fe60, processorArchitecture=MSIL"
+            "AssemblyAsmDisplayName" = "8:zxing, Version=0.16.8.0, Culture=neutral, PublicKeyToken=4e88037ac681fe60, processorArchitecture=MSIL"
                 "ScatterAssemblies"
                 {
                     "_564E2E931E7BCB8B15A936D8B32D5D27"
@@ -640,11 +670,42 @@
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_5F4529536C1EC4D27CB836E3C10A62AA"
+            {
+            "AssemblyRegister" = "3:1"
+            "AssemblyIsInGAC" = "11:FALSE"
+            "AssemblyAsmDisplayName" = "8:Microsoft.Exchange.WebServices, Version=15.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL"
+                "ScatterAssemblies"
+                {
+                    "_5F4529536C1EC4D27CB836E3C10A62AA"
+                    {
+                    "Name" = "8:Microsoft.Exchange.WebServices.dll"
+                    "Attributes" = "3:512"
+                    }
+                }
+            "SourcePath" = "8:Microsoft.Exchange.WebServices.dll"
+            "TargetName" = "8:"
+            "Tag" = "8:"
+            "Folder" = "8:_FBC50B4278B74B3D82F082F53D29EB73"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:TRUE"
+            "IsolateTo" = "8:"
+            }
             "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_6343D6B8F4B098A8FEA18C81A474FE74"
             {
             "AssemblyRegister" = "3:1"
             "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:Iwwerall, Version=1.0.661.0, Culture=neutral, processorArchitecture=MSIL"
+            "AssemblyAsmDisplayName" = "8:Iwwerall, Version=1.0.979.0, Culture=neutral, processorArchitecture=MSIL"
                 "ScatterAssemblies"
                 {
                     "_6343D6B8F4B098A8FEA18C81A474FE74"
@@ -829,15 +890,15 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:Spamfilter Sattelite Services"
-        "ProductCode" = "8:{104D8EF3-557B-4A87-86A9-AAD1763D0687}"
-        "PackageCode" = "8:{A2557EDB-19BB-4A3A-ADAB-9046B27F36E4}"
+        "ProductCode" = "8:{30614B62-1BF6-4176-B083-1D2E71234940}"
+        "PackageCode" = "8:{B7A21840-38B8-4530-A834-13A2C4FC71B6}"
         "UpgradeCode" = "8:{2CA6B09B-EBCD-4F69-A735-6EC4F2C2F4C5}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:TRUE"
-        "ProductVersion" = "8:6.0.93"
+        "ProductVersion" = "8:6.0.100"
         "Manufacturer" = "8:Iwwerall sa"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
