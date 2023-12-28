@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Iwwerall sa")]
 [assembly: AssemblyProduct("Spamfilter Monitoring Service")]
-[assembly: AssemblyCopyright("Copyright ©  2003-2021 Iwwerall sa")]
+[assembly: AssemblyCopyright("Copyright ©  2003-2023 Iwwerall sa")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("6.0.100.0")]
-[assembly: AssemblyFileVersion("6.0.100.0")]
+[assembly: AssemblyVersion("6.0.103.0")]
+[assembly: AssemblyFileVersion("6.0.103.0")]

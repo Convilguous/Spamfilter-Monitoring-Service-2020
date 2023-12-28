@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30413.136
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34018.315
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringService", "MonitoringService.csproj", "{42457B2E-5128-48E6-BCEF-1AE96A87D910}"
 EndProject
@@ -10,6 +10,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IncomingService", "..\..\Spamfilter-Incoming-Service-2020\IncomingService\IncomingService.csproj", "{DF619065-BFF1-4D8C-A3F7-8CDE2751E236}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ForwardingService", "..\..\Spamfilter-Forwarding-Service-2020\ForwardingService\ForwardingService.csproj", "{6B0A8E56-9040-4477-940B-CC26BA01EB1B}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Convilguous Shared", "..\..\Shared-References\Convilguous Shared\Convilguous Shared.shproj", "{7AED680F-F1A2-4DF0-BEF9-DF6019F2D8E5}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Convilguous Shared Windows Background", "..\..\Shared-References\Convilguous Shared Windows Background\Convilguous Shared Windows Background.shproj", "{A0CACE71-B784-4FCA-8BF1-02C659451BFB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,5 +41,15 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {35A636DA-7C83-4A35-B1E9-C39469E324D5}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\..\Shared-References\Convilguous Shared Windows Background\Convilguous Shared Windows Background.projitems*{42457b2e-5128-48e6-bcef-1ae96a87d910}*SharedItemsImports = 4
+		..\..\Shared-References\Convilguous Shared\Convilguous Shared.projitems*{42457b2e-5128-48e6-bcef-1ae96a87d910}*SharedItemsImports = 4
+		..\..\Shared-References\Convilguous Shared Windows Background\Convilguous Shared Windows Background.projitems*{6b0a8e56-9040-4477-940b-cc26ba01eb1b}*SharedItemsImports = 4
+		..\..\Shared-References\Convilguous Shared\Convilguous Shared.projitems*{6b0a8e56-9040-4477-940b-cc26ba01eb1b}*SharedItemsImports = 4
+		..\..\Shared-References\Convilguous Shared\Convilguous Shared.projitems*{7aed680f-f1a2-4df0-bef9-df6019f2d8e5}*SharedItemsImports = 13
+		..\..\Shared-References\Convilguous Shared Windows Background\Convilguous Shared Windows Background.projitems*{a0cace71-b784-4fca-8bf1-02c659451bfb}*SharedItemsImports = 13
+		..\..\Shared-References\Convilguous Shared Windows Background\Convilguous Shared Windows Background.projitems*{df619065-bff1-4d8c-a3f7-8cde2751e236}*SharedItemsImports = 4
+		..\..\Shared-References\Convilguous Shared\Convilguous Shared.projitems*{df619065-bff1-4d8c-a3f7-8cde2751e236}*SharedItemsImports = 4
 	EndGlobalSection
 EndGlobal

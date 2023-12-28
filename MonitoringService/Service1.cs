@@ -1,4 +1,5 @@
-﻿using Iwwerall;
+﻿using Convilguous_Shared;
+using Convilguous_Shared_OSDependent;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -19,7 +20,8 @@ namespace MonitoringService
 {
     public partial class Service1 : ServiceBase
     {
-        AlgemeneFuncties AF = new AlgemeneFuncties();
+        GeneralFunctions GF = new GeneralFunctions();
+        GeneralFunctionsAppSpecific GFS = new GeneralFunctionsAppSpecific();
         static string ServiceNaam = "MonitoringService";
         DateTime ControleerDoorsturenOp = DateTime.Now; // Wanneer volgende keer pas controleren op forwarding stilhangen ?
         SqlConnection SQLconnRemote;
@@ -43,7 +45,7 @@ namespace MonitoringService
 
         protected override void OnStart(string[] args)
         {
-            AF.ServiceName = ServiceNaam;
+            GeneralFunctions.ServiceName = ServiceNaam;
             bool StartupService = true;
 
             try
@@ -53,9 +55,9 @@ namespace MonitoringService
                 // Check if this is the database has been setup
                 if (Environment.MachineName.ToLower() != "yoda")
                 {
-                    AlgemeneFuncties.conn = new SqlConnection("server=localhost,14333;database=master;Integrated Security=SSPI");
+                    GeneralFunctionsAppSpecific.conn = new SqlConnection("server=localhost,14333;database=master;Integrated Security=SSPI");
 
-                    if (AF.intParse(AF.SQL_SendQueryWithObjectResponse(AlgemeneFuncties.conn, "IF EXISTS (SELECT Name FROM SysDatabases WHERE Name = 'spamfilter') BEGIN SELECT 1 END ELSE BEGIN SELECT 0 END")) == 0)
+                    if (GF.IntParse(GFS.SQL_SendQueryWithObjectResponse("IF EXISTS (SELECT Name FROM SysDatabases WHERE Name = 'spamfilter') BEGIN SELECT 1 END ELSE BEGIN SELECT 0 END")) == 0)
                     {
                         StartupService = false;
                         // Spamfilter does not exist, create the database in the default location, cannot be kille dby stopping the service !
@@ -64,14 +66,14 @@ namespace MonitoringService
                 }
                 if (StartupService)
                 {
-                    AlgemeneFuncties.conn = new SqlConnection(@"server=localhost,14333;database=spamfilter;Integrated Security=SSPI;Asynchronous Processing=true;MultipleActiveResultSets=true");
+                    GeneralFunctionsAppSpecific.conn = new SqlConnection(@"server=localhost,14333;database=spamfilter;Integrated Security=SSPI;Asynchronous Processing=true;MultipleActiveResultSets=true");
 
                     new Thread(() => ControlesUitvoeren()) { IsBackground = true }.Start();
                 }
             }
             catch (Exception eee)
             {
-                AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282327, true);
+                GFS.LogError(eee, EventLogEntryType.FailureAudit, 2009282327, true);
                 if (Environment.MachineName.ToLower() != "yoda") 
                     new Thread(() => TryStarting()) { IsBackground = true }.Start();
             }
@@ -95,7 +97,7 @@ namespace MonitoringService
             }
             catch (Exception eee)
             {
-                AF.LogError(eee, EventLogEntryType.FailureAudit, 2101212207, true);
+                GFS.LogError(eee, EventLogEntryType.FailureAudit, 2101212207, true);
             }
         }
 
@@ -111,7 +113,7 @@ namespace MonitoringService
 
                     if (Environment.MachineName.ToLower() != "yoda")
                     {
-                        if (AF.intParse(AF.SQL_SendQueryWithObjectResponse(AlgemeneFuncties.conn, "IF EXISTS (SELECT Name FROM SysDatabases WHERE Name = 'spamfilter') BEGIN SELECT 1 END ELSE BEGIN SELECT 0 END")) == 0)
+                        if (GF.IntParse(GFS.SQL_SendQueryWithObjectResponse("IF EXISTS (SELECT Name FROM SysDatabases WHERE Name = 'spamfilter') BEGIN SELECT 1 END ELSE BEGIN SELECT 0 END")) == 0)
                         {
                             StartupService = false;
                             // Spamfilter does not exist, create the database in the default location, cannot be kille dby stopping the service !
@@ -120,7 +122,7 @@ namespace MonitoringService
                     }
                     if (StartupService)
                     {
-                        AlgemeneFuncties.conn = new SqlConnection(@"server=localhost,14333;database=spamfilter;Integrated Security=SSPI;Asynchronous Processing=true;MultipleActiveResultSets=true");
+                        GeneralFunctionsAppSpecific.conn = new SqlConnection(@"server=localhost,14333;database=spamfilter;Integrated Security=SSPI;Asynchronous Processing=true;MultipleActiveResultSets=true");
 
                         new Thread(() => ControlesUitvoeren()) { IsBackground = true }.Start();
                     }
@@ -128,7 +130,7 @@ namespace MonitoringService
                 }
                 catch (Exception)
                 {
-                    AF.LogError($"Re-trying the intial startup still fails, try #{Retries}", EventLogEntryType.Warning, 2101212138, true);
+                    GFS.LogError($"Re-trying the intial startup still fails, try #{Retries}", EventLogEntryType.Warning, 2101212138, true);
                 }
                 Retries++;
             }
@@ -166,24 +168,22 @@ namespace MonitoringService
                     Directory.CreateDirectory(Path.Combine(Logs, "Spamfilter"));
 
                 // Create database
-                AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn,
-                    $"CREATE DATABASE Spamfilter ON (NAME = 'Spamfilter', FILENAME = '{Database}\\Spamfilter\\Spamfilter_data.mdf') LOG ON (NAME = 'SpamfilterLog', FILENAME = '{Logs}\\Spamfilter\\Spamfilter_log.mdf')");
-                AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn,
-                    $"CREATE DATABASE IPRanges ON (NAME = 'IPRanges', FILENAME = '{Database}\\Spamfilter\\IPRanges_data.mdf') LOG ON (NAME = 'IPRangesLog', FILENAME = '{Logs}\\Spamfilter\\IPRanges_log.mdf')");
+                GFS.SQL_SendQueryWithoutResponse($"CREATE DATABASE Spamfilter ON (NAME = 'Spamfilter', FILENAME = '{Database}\\Spamfilter\\Spamfilter_data.mdf') LOG ON (NAME = 'SpamfilterLog', FILENAME = '{Logs}\\Spamfilter\\Spamfilter_log.mdf')");
+                GFS.SQL_SendQueryWithoutResponse($"CREATE DATABASE IPRanges ON (NAME = 'IPRanges', FILENAME = '{Database}\\Spamfilter\\IPRanges_data.mdf') LOG ON (NAME = 'IPRangesLog', FILENAME = '{Logs}\\Spamfilter\\IPRanges_log.mdf')");
                 // Change recovery to simple
-                AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "alter database Spamfilter set recovery simple");
-                AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "alter database IPRanges set recovery simple");
+                GFS.SQL_SendQueryWithoutResponse("alter database Spamfilter set recovery simple");
+                GFS.SQL_SendQueryWithoutResponse("alter database IPRanges set recovery simple");
 
                 // switch to database Spamfitler
-                AlgemeneFuncties.conn.ChangeDatabase("Spamfilter");
+                GeneralFunctionsAppSpecific.conn.ChangeDatabase("Spamfilter");
 
                 // Create the main tables
                 // Get Offset from the maindatabase
-                DataTable dtOffsets = AF.SQL_SendWithDirectDataTableResponse(SQLconnRemote, "HaalMailIDOffSet");
+                DataTable dtOffsets = GFS.SQL_SendWithDirectDataTableResponse(SQLconnRemote, "HaalMailIDOffSet");
                 if (dtOffsets.Rows.Count > 0)
                 {
-                    int MailIDOffset = AF.intParse(dtOffsets.Rows[0]["MailIDOffSet"]);
-                    long SeedValue = AF.Int64Parse(dtOffsets.Rows[0]["SeedValue"]) + 65536;
+                    int MailIDOffset = GF.IntParse(dtOffsets.Rows[0]["MailIDOffSet"]);
+                    long SeedValue = GF.Int64Parse(dtOffsets.Rows[0]["SeedValue"]) + 65536;
 
                     if (SeedValue == 65536)
                     {
@@ -193,16 +193,16 @@ namespace MonitoringService
 
                     if (MailIDOffset == 0)
                     {
-                        AF.LogError("This server has no row in GeneralSettings table in the main database", EventLogEntryType.Error, 2010032237, true);
+                        GFS.LogError("This server has no row in GeneralSettings table in the main database", EventLogEntryType.Error, 2010032237, true);
                     }
                     else if ((SeedValue - 2000000 - MailIDOffset) % 65536 != 0)
                     {
-                        AF.LogError($"Seedvalue {SeedValue} in GeneralSettings is not a valid value for this server with MailIDOffset {MailIDOffset}", EventLogEntryType.Error, 2010032238, true);
+                        GFS.LogError($"Seedvalue {SeedValue} in GeneralSettings is not a valid value for this server with MailIDOffset {MailIDOffset}", EventLogEntryType.Error, 2010032238, true);
                     }
                     else
                     {
                         // Create Mail table
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn,
+                        GFS.SQL_SendQueryWithoutResponse(
                             "CREATE TABLE [dbo].[Mail]( " +
                             $"    [ID] [bigint]  IDENTITY({SeedValue}, 65536) NOT NULL, " +
                             "    [MessageID] [bigint]  NOT NULL, " +
@@ -245,7 +245,7 @@ namespace MonitoringService
                             ") WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY] " +
                             ") ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[BlockedByClients]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[BlockedByClients]( " +
                             "    [ID] [bigint] NOT NULL primary key, " +
                             "    [MailFrom] [varchar] (255) NOT NULL, " +
                             "    [RcptTo] [varchar] (255) NOT NULL, " +
@@ -253,18 +253,18 @@ namespace MonitoringService
                             "    [BlockEnd] [datetime]  NOT NULL, " +
                             "    [InsertedBy] [varchar] (255) NOT NULL default CURRENT_USER)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[DeletedIPRanges]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[DeletedIPRanges]( " +
                             "	[ID] [bigint] IDENTITY(1,1) NOT NULL primary key, " +
                             "	[FirstIP] [bigint] NOT NULL, " +
                             "	[LastIP] [bigint] NOT NULL, " +
                             "	[DeletedID] [bigint] NOT NULL)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[FakeMailAddresses]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[FakeMailAddresses]( " +
                             "	[ID] [bigint] NOT NULL primary key, " +
                             "	[Email] [varchar](255) NOT NULL, " +
                             "	[ListedSince] [datetime] NOT NULL default CURRENT_TIMESTAMP)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[ForwardingSettings]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[ForwardingSettings]( " +
                             "	[Domainname] [varchar](255) NOT NULL, " +
                             "	[Filter] [bit] NOT NULL, " +
                             "	[MX1] [varchar](255) NOT NULL, " +
@@ -279,19 +279,19 @@ namespace MonitoringService
                             "	[MaxMessageSize] [bigint] NOT NULL default 20971520, " +
                             "	[AllowAbused] [bit] NOT NULL default 0)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[GoodMailAddresses]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[GoodMailAddresses]( " +
                             "	[ID] [bigint] NOT NULL primary key, " +
                             "	[Email] [varchar](255) NOT NULL, " +
                             "	[Beheerder] [varchar](40) NULL, " +
                             "	[ListedSince] [datetime] NOT NULL default CURRENT_TIMESTAMP)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[MailContent]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[MailContent]( " +
                             "	[MessageID] [bigint] NOT NULL primary key, " +
                             "	[BodyBinary] [varbinary](max) NOT NULL, " +
                             "	[Datum] [datetime] NOT NULL default CURRENT_TIMESTAMP, " +
                             "	[Compressed] [bit] NOT NULL default 0) ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[MailForwarded]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[MailForwarded]( " +
                             "	[ID] [bigint] IDENTITY(10000,1) NOT NULL primary key, " +
                             "	[MessageID] [bigint] NOT NULL, " +
                             "	[MailFrom] [varchar](255) NOT NULL, " +
@@ -318,7 +318,7 @@ namespace MonitoringService
                             "	[EIGHTBITMIME] [bit] NOT NULL default 0, " +
                             "	[UsingTLS] [bit] NOT NULL default 0)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[SubstituteEmails]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[SubstituteEmails]( " +
                             "	[ID] [bigint] NOT NULL primary key, " +
                             "	[MailFrom] [varchar](255) NOT NULL, " +
                             "	[MailFromHost] [varchar](255) NOT NULL, " +
@@ -327,36 +327,36 @@ namespace MonitoringService
                             "	[BeginDatum] [datetime] NOT NULL, " +
                             "	[EindDatum] [datetime] NOT NULL) ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[UndeliverableInTime]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[UndeliverableInTime]( " +
                             "	[ID] [bigint] IDENTITY(1,1) NOT NULL primary key, " +
                             "	[MessageID] [bigint] NOT NULL, " +
                             "	[RcptTo] [varchar](255) NOT NULL, " +
                             "	[Tijdstip] [datetime] NOT NULL default CURRENT_TIMESTAMP)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[UndeliverableSubjects]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[UndeliverableSubjects]( " +
                             "	[ID] [bigint] NOT NULL, " +
                             "	[Subject] [nvarchar](1024) NOT NULL, " +
                             "	[MailFrom] [nvarchar](255) NOT NULL)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[UserPreferences]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[UserPreferences]( " +
                             "	[ID] [bigint] NOT NULL, " +
                             "	[EmailAddress] [varchar](255) NOT NULL, " +
                             "	[NoNDRs] [bit] NOT NULL, " +
                             "	[ForwardFreeMails] [bit] NOT NULL)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE [dbo].[Performance]( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE [dbo].[Performance]( " +
                             "	[IncomingStarting] [bit] NOT NULL," +
                             "	[ForwardingStarting] [bit] NOT NULL," +
                             "	[LastMailReceived] [datetime] NOT NULL," +
                             "	[LastMailForwarded] [datetime] NOT NULL," +
                             "	[IncomingProgress] [int] NOT NULL)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "insert Performance(IncomingStarting, ForwardingStarting, LastMailForwarded, LastMailReceived, IncomingProgress) " +
+                        GFS.SQL_SendQueryWithoutResponse("insert Performance(IncomingStarting, ForwardingStarting, LastMailForwarded, LastMailReceived, IncomingProgress) " +
                             "select 0,0,'19000101', '19000101', 0");
 
                         // Alle Types aanmaken
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TYPE BBCs AS TABLE( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TYPE BBCs AS TABLE( " +
                             "	[ID] [bigint] NULL, " +
                             "	[MailFrom] [nvarchar](max) NULL, " +
                             "	[RcptTo] [nvarchar](max) NULL, " +
@@ -364,7 +364,7 @@ namespace MonitoringService
                             "	[BlockEnd] [datetime] NULL, " +
                             "	[InsertedBy] [varchar](max) NULL)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TYPE ForwardingSettings AS TABLE( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TYPE ForwardingSettings AS TABLE( " +
                             "	[Domainname] [varchar](max) NULL, " +
                             "	[Filter] [bit] NOT NULL, " +
                             "	[MX1] [varchar](max) NOT NULL, " +
@@ -379,9 +379,9 @@ namespace MonitoringService
                             "	[MaxMessageSize] [bigint] NULL, " +
                             "	[AllowAbused] [bit] NULL )");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TYPE IDList AS TABLE( ID [bigint] NULL )");
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TYPE IDList AS TABLE( ID [bigint] NULL )");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TYPE IPRangesList AS TABLE( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TYPE IPRangesList AS TABLE( " +
                             "	[ID] [bigint] NOT NULL, " +
                             "	[FirstIP] [bigint] NOT NULL, " +
                             "	[LastIP] [bigint] NOT NULL, " +
@@ -394,20 +394,20 @@ namespace MonitoringService
                             "	[Corrected] [bit] NOT NULL, " +
                             "	[Abused] [bit] NULL) ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TYPE MailAddresses AS TABLE( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TYPE MailAddresses AS TABLE( " +
                             "	[ID] [bigint] NULL, " +
                             "	[Email] [varchar](max) NULL, " +
                             "	[Beheerder] [varchar](max) NULL, " +
                             "	[ListedSince] [datetime] NULL) ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TYPE MessageIDList AS TABLE( MessageID bigint NULL)");
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TYPE MessageIDList AS TABLE( MessageID bigint NULL)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TYPE NDRs AS TABLE( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TYPE NDRs AS TABLE( " +
                             "	[ID] [bigint] NULL, " +
                             "	[Subject] [nvarchar](max) NULL, " +
                             "	[MailFrom] [nvarchar](max) NULL) ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TYPE STEs AS TABLE( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TYPE STEs AS TABLE( " +
                             "	[ID] [bigint] NULL, " +
                             "	[MailFrom] [varchar](max) NULL, " +
                             "	[MailFromHost] [varchar](max) NULL, " +
@@ -416,15 +416,15 @@ namespace MonitoringService
                             "	[BeginDatum] [datetime] NULL, " +
                             "	[EindDatum] [datetime] NULL)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TYPE UserPrefs AS TABLE( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TYPE UserPrefs AS TABLE( " +
                             "	[ID] [bigint] NULL, " +
                             "	[EmailAddress] [varchar](max) NULL, " +
                             "	[NoNDRs] [bit] NULL, " +
                             "	[ForwardFreeMails] [bit] NULL)");
 
-                        AlgemeneFuncties.conn.ChangeDatabase("IPRanges");
+                        GeneralFunctionsAppSpecific.conn.ChangeDatabase("IPRanges");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE TABLE IPRanges( " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE TABLE IPRanges( " +
                             "	[ID] [bigint] NOT NULL primary key, " +
                             "	[FirstIP] [bigint] NOT NULL, " +
                             "	[LastIP] [bigint] NOT NULL, " +
@@ -438,11 +438,11 @@ namespace MonitoringService
                             "	[Abused] [bit] NOT NULL default 0) ");
 
 
-                        AlgemeneFuncties.conn.ChangeDatabase("Spamfilter");
+                        GeneralFunctionsAppSpecific.conn.ChangeDatabase("Spamfilter");
 
                         // Stored Procedures aanmaken
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create PROCEDURE BerichtVerstuurd @ID bigint, @CommunicationsLog nvarchar(max) AS " +
+                        GFS.SQL_SendQueryWithoutResponse("create PROCEDURE BerichtVerstuurd @ID bigint, @CommunicationsLog nvarchar(max) AS " +
                             " " +
                             "BEGIN TRAN  " +
                             " " +
@@ -480,7 +480,7 @@ namespace MonitoringService
                             " " +
                             "COMMIT TRAN");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE PROCEDURE BezigMetMail @ID bigint AS " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE PROCEDURE BezigMetMail @ID bigint AS " +
                             " " +
                             "declare @Nu datetime = CURRENT_TIMESTAMP " +
                             "declare @RcptToHost varchar(255) " +
@@ -497,7 +497,7 @@ namespace MonitoringService
                             "where isnull(SE.RcptToHost, M.RcptToHost) = @RcptToHost " +
                             "and M.Busy = 1");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure BlockedByClientsSync @BlockedByClients as BBCs readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure BlockedByClientsSync @BlockedByClients as BBCs readonly as " +
                             " " +
                             "insert BlockedByClients(ID, MailFrom, RcptTo, BlockStart, BlockEnd, InsertedBy) " +
                             "select S.ID, S.MailFrom, S.RcptTo, S.BlockStart, S.BlockEnd, S.InsertedBy " +
@@ -510,45 +510,45 @@ namespace MonitoringService
                             "left outer join @BlockedByClients S on T.ID = S.ID " +
                             "where isnull(S.ID, 0) = 0");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure FakeMailAddressesAddBulk @FakeMailAddressesList as MailAddresses readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure FakeMailAddressesAddBulk @FakeMailAddressesList as MailAddresses readonly as " +
                             " " +
                             "insert FakeMailAddresses(ID, Email, ListedSince) " +
                             "select ID, Email, ListedSince " +
                             "from @FakeMailAddressesList");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure FakeMailAddressesDeleteBulk @IDs as IDList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure FakeMailAddressesDeleteBulk @IDs as IDList readonly as " +
                             " " +
                             "delete M " +
                             "from FakeMailAddresses M " +
                             "inner join @IDs S on M.ID = S.ID");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure FakeMailAddressesGetMaxID as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure FakeMailAddressesGetMaxID as " +
                             " " +
                             "select max(ID) as ID from FakeMailAddresses");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure ForwardingSettingsSync @ForwardingSettings as ForwardingSettings readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure ForwardingSettingsSync @ForwardingSettings as ForwardingSettings readonly as " +
                             " " +
                             "update T " +
-                            "set Filter = S.Filter, MX1 = S.MX1, MX1Poort = S.MX1Poort,  " +
+                            "set [Filter] = S.[Filter], MX1 = S.MX1, MX1Poort = S.MX1Poort,  " +
                             "   MX2 = S.MX2, MX2Poort = S.MX2Poort, " +
                             "   MX3 = S.MX3, MX3Poort = S.MX3Poort,  " +
                             "   Beheerder = S.Beheerder, VervalDag = S.Vervaldag,  " +
                             "   OnlyGoodList = S.OnlyGoodList, MaxMessageSize = S.MaxMessageSize, AllowAbused = S.AllowAbused " +
                             "from ForwardingSettings T " +
                             "inner join @ForwardingSettings S on T.Domainname = S.Domainname collate SQL_Latin1_General_CP1_CI_AS " +
-                            "where T.Filter <> S.Filter or T.MX1 <> S.MX1 collate SQL_Latin1_General_CP1_CI_AS or T.MX1Poort <> S.MX1Poort or  " +
+                            "where T.[Filter] <> S.[Filter] or T.MX1 <> S.MX1 collate SQL_Latin1_General_CP1_CI_AS or T.MX1Poort <> S.MX1Poort or  " +
                             "   T.MX2 <> S.MX2 collate SQL_Latin1_General_CP1_CI_AS or T.MX2Poort <> S.MX2Poort or " +
                             "   T.MX3 <> S.MX3 collate SQL_Latin1_General_CP1_CI_AS or T.MX3Poort <> S.MX3Poort or  " +
                             "   T.Beheerder <> S.Beheerder collate SQL_Latin1_General_CP1_CI_AS or T.VervalDag <> S.Vervaldag or " +
                             "   T.OnlyGoodList <> S.OnlyGoodList or T.MaxMessageSize <> S.MaxMessageSize or T.AllowAbused <> S.AllowAbused " +
                             " " +
-                            "insert ForwardingSettings(Domainname, MX1, MX1Poort, MX2, MX2Poort, MX3, MX3Poort, Beheerder, Vervaldag, OnlyGoodList, Filter, MaxMessageSize, AllowAbused) " +
-                            "select S.Domainname, S.MX1, S.MX1Poort, S.MX2, S.MX2Poort, S.MX3, S.MX3Poort, S.Beheerder, S.Vervaldag, S.OnlyGoodList, S.Filter, S.MaxMessageSize, S.AllowAbused " +
+                            "insert ForwardingSettings(Domainname, MX1, MX1Poort, MX2, MX2Poort, MX3, MX3Poort, Beheerder, Vervaldag, OnlyGoodList, [Filter], MaxMessageSize, AllowAbused) " +
+                            "select S.Domainname, S.MX1, S.MX1Poort, S.MX2, S.MX2Poort, S.MX3, S.MX3Poort, S.Beheerder, S.Vervaldag, S.OnlyGoodList, S.[Filter], S.MaxMessageSize, S.AllowAbused " +
                             "from @ForwardingSettings S " +
                             "left outer join ForwardingSettings T on T.Domainname = S.Domainname collate SQL_Latin1_General_CP1_CI_AS " +
-                            "where isnull(T.Domainname, '') = '' ");
+                            "where T.Domainname is null ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure GetMXRecords @RcptToHost varchar(255) AS " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure GetMXRecords @RcptToHost varchar(255) AS " +
                             " " +
                             "declare @MXrecords as table( " +
                             "	MXRecord varchar(255), " +
@@ -584,7 +584,7 @@ namespace MonitoringService
                             "select MXRecord, [Port] " +
                             "from @MXRecords");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure GetStatisticsHost as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure GetStatisticsHost as " +
                             " " +
                             "declare @TempStats as table( " +
                             " Forwarded bigint, " +
@@ -635,23 +635,23 @@ namespace MonitoringService
                             "where tijdstip < 480 " +
                             "group by TijdStip ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure GoodMailAddressesAddBulk @GoodMailAddressesList as MailAddresses readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure GoodMailAddressesAddBulk @GoodMailAddressesList as MailAddresses readonly as " +
                             " " +
                             "insert GoodMailAddresses(ID, Email, Beheerder, ListedSince) " +
                             "select ID, Email, Beheerder, ListedSince " +
                             "from @GoodMailAddressesList ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure GoodMailAddressesDeleteBulk @IDs as IDList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure GoodMailAddressesDeleteBulk @IDs as IDList readonly as " +
                             " " +
                             "delete M " +
                             "from GoodMailAddresses M " +
                             "inner join @IDs S on M.ID = S.ID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure GoodMailAddressesGetMaxID as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure GoodMailAddressesGetMaxID as " +
                             " " +
                             "select max(ID) as ID from GoodMailAddresses");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure HaalControleMetingen as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure HaalControleMetingen as " +
                             " " +
                             "declare @Metingen as table( " +
                             "	Waarde	bigint,  " +
@@ -713,7 +713,7 @@ namespace MonitoringService
                             "select Waarde,Beschrijving  " +
                             "from @Metingen  ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure HaalVolgendeGoedeMail AS " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure HaalVolgendeGoedeMail AS " +
                             " " +
                             "declare @MaxMessageSize bigint = 52428800 " +
                             "DECLARE @Domainname varchar(255) " +
@@ -761,7 +761,7 @@ namespace MonitoringService
                             "	ORDER BY Volgorde, M.ForwardingRetries, M.Datum " +
                             "END");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure HaalVolgendeGoedeMailDomain AS " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure HaalVolgendeGoedeMailDomain AS " +
                             " " +
                             "declare @Nu datetime = CURRENT_TIMESTAMP " +
                             " " +
@@ -783,7 +783,7 @@ namespace MonitoringService
                             " " +
                             "update Performance set ForwardingStarting = 0");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure HaalVolgendeGoedeMailDomainLijst @RcptToHost varchar(255) AS " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure HaalVolgendeGoedeMailDomainLijst @RcptToHost varchar(255) AS " +
                             " " +
                             "declare @Nu datetime = CURRENT_TIMESTAMP " +
                             " " +
@@ -818,13 +818,13 @@ namespace MonitoringService
                             "and isnull(SE.RcptToHost, M.RcptToHost) = @RcptToHost " +
                             "AND M.MessageID <> 0");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IPRangesAddBulk @IPRangesList as IPRangesList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IPRangesAddBulk @IPRangesList as IPRangesList readonly as " +
                             "  " +
                             "insert IPRanges.dbo.IPRanges (ID, FirstIP, LastIP, Blocked, DateBlocked, [Description], LastUpdater, ListToProcess, FirstMessageID, Corrected, Abused) " +
                             "select ID, FirstIP, LastIP, Blocked, DateBlocked, [Description], LastUpdater, ListToProcess, FirstMessageID, Corrected, Abused " +
                             "from @IPRangesList ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IPRangesDeleteBulk @IDs as IDList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IPRangesDeleteBulk @IDs as IDList readonly as " +
                             " " +
                             "insert DeletedIPRanges(FirstIP, LastIP, DeletedID) " +
                             "select IP.FirstIP, IP.LastIP, IP.ID " +
@@ -835,11 +835,11 @@ namespace MonitoringService
                             "from IPRanges.dbo.IPRanges IP " +
                             "inner join @IDs S on IP.ID = S.ID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IPRangesGetMaxID as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IPRangesGetMaxID as " +
                             " " +
                             "select max(ID) as ID from IPRanges.dbo.IPRanges ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IsCustomerOnlyGoodListActive @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IsCustomerOnlyGoodListActive @ID bigint as " +
                             " " +
                             "IF EXISTS (SELECT * FROM ForwardingSettings WHERE OnlyGoodList = 1  " +
                             "	AND Domainname IN (SELECT RcptToHost FROM Mail WHERE MessageID = @ID))  " +
@@ -851,7 +851,7 @@ namespace MonitoringService
                             "	SELECT 'NEEN'  " +
                             "END ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IsDomeinGeabbonneerd @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IsDomeinGeabbonneerd @ID bigint as " +
                             " " +
                             "IF EXISTS (SELECT * FROM ForwardingSettings WHERE Domainname IN  " +
                             "	(SELECT RcptToHost FROM Mail WHERE MessageID = @ID) AND Filter = 1)  " +
@@ -863,7 +863,7 @@ namespace MonitoringService
                             "	SELECT 'NEEN'  " +
                             "END ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IsMailUndeliverable @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IsMailUndeliverable @ID bigint as " +
                             "" +
                             "if not exists (select U.ID from UserPreferences U, Mail M " +
                             "	where U.EmailAddress = M.RcptTo   " +
@@ -906,7 +906,7 @@ namespace MonitoringService
                             "	select 'NEEN' " +
                             "end ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IsRcptToHostGeldig @RcptToHost varchar(255) as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IsRcptToHostGeldig @RcptToHost varchar(255) as " +
                             " " +
                             "IF EXISTS (SELECT * FROM ForwardingSettings WHERE Domainname = @RcptToHost) " +
                             "BEGIN " +
@@ -917,7 +917,7 @@ namespace MonitoringService
                             "	SELECT 'NEEN'  " +
                             "END ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IsRecipientFake @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IsRecipientFake @ID bigint as " +
                             " " +
                             "IF EXISTS (SELECT * FROM FakeMailAddresses WHERE Email IN (SELECT RcptTo FROM Mail WHERE MessageID = @ID)) " +
                             "BEGIN " +
@@ -928,7 +928,7 @@ namespace MonitoringService
                             "SELECT 'NEEN' " +
                             "END ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IsRecipientGood @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IsRecipientGood @ID bigint as " +
                             " " +
                             "IF EXISTS (SELECT * FROM GoodMailAddresses WHERE Email IN (SELECT RcptTo FROM Mail WHERE MessageID = @ID)) " +
                             "BEGIN  " +
@@ -939,7 +939,7 @@ namespace MonitoringService
                             "	SELECT 'NEEN' " +
                             "END ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure IsSenderBlockedByClient @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure IsSenderBlockedByClient @ID bigint as " +
                             " " +
                             "IF EXISTS (SELECT * FROM BlockedByClients B, Mail M  " +
                             "	WHERE M.RcptTo = B.RcptTo AND B.MailFrom = M.MailFrom AND M.MessageID = @ID  " +
@@ -952,13 +952,13 @@ namespace MonitoringService
                             "	SELECT 'NEEN' " +
                             "END ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailAllowedDeleteBulk @IDs as IDList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailAllowedDeleteBulk @IDs as IDList readonly as " +
                             " " +
                             "delete T " +
                             "from Mail T " +
                             "inner join @IDs S on T.ID = S.ID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailAllowedGetAll as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailAllowedGetAll as " +
                             " " +
                             "declare @Vanaf datetime  " +
                             " " +
@@ -976,13 +976,13 @@ namespace MonitoringService
                             "AND Datum < @Vanaf " +
                             "AND Busy = 0  ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailBlockedDeleteBulk @IDs as IDList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailBlockedDeleteBulk @IDs as IDList readonly as " +
                             " " +
                             "delete T " +
                             "from Mail T " +
                             "inner join @IDs S on T.ID = S.ID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailBlockedGetAll as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailBlockedGetAll as " +
                             " " +
                             "select 	M.[MessageID], M.[MailFrom], M.[MailFromHost], M.[RcptTo], M.[RcptToHost], M.[MessageSize], M.[ServerName], M.[Subject], M.[ServerIP], M.[ServerIPNum], M.[Datum],  " +
                             "	M.[Status] as  [Reason], M.[IncomingServer], M.[CheckSum], M.[XMailer], M.[XPriority], M.[XMSMailPriority], M.[XMimeOLE], M.[OriginatingHost], M.[CommunicationsLog], " +
@@ -1012,7 +1012,7 @@ namespace MonitoringService
                             "WHERE M.[Status] = 'FAIL' AND MessageSize = 0   " +
                             "AND MessageID > 0 ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailComplete @MessageID bigint, @Status char(5), @ServerName varchar(255), @PreChecked int, @XMailer varchar(50), @XPriority varchar(50), " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailComplete @MessageID bigint, @Status char(5), @ServerName varchar(255), @PreChecked int, @XMailer varchar(50), @XPriority varchar(50), " +
                             "	@XMSMailPriority varchar(50), @XMimeOLE varchar(50), @OriginatingHost varchar(255), @Subject nvarchar(255), @EIGHTBITMIME bit,  " +
                             "	@ErrorIncoming varchar(255), @CommunicationsLog nvarchar(max), @UsingTLS bit as " +
                             " " +
@@ -1026,54 +1026,54 @@ namespace MonitoringService
                             "update Performance " +
                             "set LastMailReceived = GETUTCDATE() ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailContentDeleteBulk @MessageIDs as MessageIDList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailContentDeleteBulk @MessageIDs as MessageIDList readonly as " +
                             " " +
                             "delete T " +
                             "from MailContent T " +
                             "inner join @MessageIDs S on T.MessageID = S.MessageID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailContentGetAll as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailContentGetAll as " +
                             " " +
                             "select top 5000 MessageID, BodyBinary, Datum " +
                             "from MailContent ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailContentGetIDs as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailContentGetIDs as " +
                             " " +
                             "select MessageID " +
                             "from MailContent ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailDeleteBulk @IDs as IDList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailDeleteBulk @IDs as IDList readonly as " +
                             " " +
                             "delete T " +
                             "from Mail T " +
                             "inner join @IDs S on T.ID = S.ID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailForwardedDeleteBulk @IDs as IDList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailForwardedDeleteBulk @IDs as IDList readonly as " +
                             " " +
                             "delete T " +
                             "from MailForwarded T " +
                             "inner join @IDs S on T.ID = S.ID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailForwardedGetAll as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailForwardedGetAll as " +
                             " " +
                             "select 	M.[MessageID], M.[MailFrom], M.[MailFromHost], M.[RcptTo], M.[RcptToHost], M.[MessageSize], M.[ServerName], M.[Subject], M.[ServerIP], M.[ServerIPNum], M.[Datum],  " +
                             "	M.DatumDoorgestuurd, M.[Status] as  [Reason], M.[IncomingServer], M.[CheckSum], M.[XMailer], M.[XPriority], M.[XMSMailPriority], M.[XMimeOLE], M.[OriginatingHost], M.[CommunicationsLog], " +
                             "	1 as [Importing], M.ID as [ImportingID] " +
                             "from MailForwarded M ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailForwardedGetIDs as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailForwardedGetIDs as " +
                             " " +
                             "select ID from MailForwarded ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailGetIDs as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailGetIDs as " +
                             " " +
                             "select ID from Mail");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailGrootteTeGaan @ID bigint, @Maat bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailGrootteTeGaan @ID bigint, @Maat bigint as " +
                             " " +
                             "UPDATE Mail SET MessageSizeSent = MessageSize - @Maat WHERE ID = @ID");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailVerzendenMislukt @ID bigint, @ErrorMessage varchar(255), @CommunicationsLog nvarchar(max) as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailVerzendenMislukt @ID bigint, @ErrorMessage varchar(255), @CommunicationsLog nvarchar(max) as " +
                             " " +
                             "IF (LEFT(@ErrorMessage,1) = '5' AND @ErrorMessage NOT LIKE '%SPF%')  " +
                             "BEGIN  " +
@@ -1087,13 +1087,13 @@ namespace MonitoringService
                             "	WHERE ID = @ID  " +
                             "END");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailWaitingDeleteBulk @IDs as IDList readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailWaitingDeleteBulk @IDs as IDList readonly as " +
                             " " +
                             "delete T " +
                             "from Mail T " +
                             "inner join @IDs S on T.ID = S.ID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MailWaitingGetAll as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MailWaitingGetAll as " +
                             " " +
                             "SELECT M.MessageID, M.MailFrom, M.MailFromHost, M.RcptTo, M.RcptToHost, M.MessageSize, M.ServerName, M.[Subject], M.ServerIP, M.ServerIPNum, M.Datum,  " +
                             "	M.[Status] as Reason, M.IncomingServer, M.[Checksum], M.XMailer, M.XPriority, M.XMSMailPriority, M.XMimeOLE, M.OriginatingHost, M.CommunicationsLog,  " +
@@ -1102,28 +1102,28 @@ namespace MonitoringService
                             "WHERE (M.PreChecked = 0 OR M.PreChecked = 9)  " +
                             "AND M.[Status] <> 'RECV' AND Status <> 'FAIL' AND Status <> 'RSET' ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MarkRcptToHostAsNotBusy @RcptToHost varchar(255) AS " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MarkRcptToHostAsNotBusy @RcptToHost varchar(255) AS " +
                             " " +
                             "update Mail " +
                             "set Busy = 0, ForwardingRetries = ForwardingRetries + 1 " +
                             "where RcptTohost = @RcptToHost " +
                             "and Busy = 1 ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MoveBadFreeMailToBad @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MoveBadFreeMailToBad @ID bigint as " +
                             " " +
                             "UPDATE Mail SET PreChecked = 11, " +
                             "	Status = 'BLOCK',  " +
                             "	ErrorIncoming = 'Bad Free-Mail, content verified' " +
                             "WHERE ID = @ID");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure MoveUndeliverableToBad @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure MoveUndeliverableToBad @ID bigint as " +
                             " " +
                             "UPDATE Mail SET PreChecked = 11,  " +
                             "	Status = 'BLOCK', " +
                             "	ErrorIncoming = 'Undeliverable Mail Forward'  " +
                             "WHERE MessageID = @ID");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure PerformanceGet as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure PerformanceGet as " +
                             " " +
                             "select IncomingStarting, ForwardingStarting, LastMailReceived, LastMailForwarded, " +
                             "(select count(*) from Mail where status = 'RECV') as [Receiving], " +
@@ -1135,11 +1135,11 @@ namespace MonitoringService
                             "IncomingProgress " +
                             "from Performance ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure PerformanceUpdateProgress @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure PerformanceUpdateProgress @ID bigint as " +
                             " " +
                             "update Performance set IncomingProgress = @ID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure RcptToHostData @RcptToHost varchar(255) as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure RcptToHostData @RcptToHost varchar(255) as " +
                             " " +
                             "IF EXISTS (SELECT * FROM ForwardingSettings WHERE Domainname = @RcptToHost)  " +
                             "BEGIN  " +
@@ -1152,13 +1152,13 @@ namespace MonitoringService
                             "	SELECT 'NEEN' as Toegelaten, cast(0 as bit) as AllowAbused, 20971520 as MaxMessageSize " +
                             "END  ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure ResetBusyFlags as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure ResetBusyFlags as " +
                             " " +
                             "UPDATE Mail SET Busy = 0 WHERE Busy = 1 " +
                             " " +
                             "update Performance set ForwardingStarting = 1, LastMailForwarded = GETUTCDATE() ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure ServerUnreachable @ID bigint as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure ServerUnreachable @ID bigint as " +
                             " " +
                             "UPDATE Mail  " +
                             "SET ForwardingRetries = ForwardingRetries +1  " +
@@ -1168,7 +1168,7 @@ namespace MonitoringService
                             "SET Busy = 0  " +
                             "WHERE ID = @ID");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure SubstituteEmailsSync @SubstituteEmails as STEs readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure SubstituteEmailsSync @SubstituteEmails as STEs readonly as " +
                             " " +
                             "insert SubstituteEmails(ID, MailFrom, MailFromHost, RcptTo, RcptToHost, BeginDatum, EindDatum) " +
                             "select S.ID, S.MailFrom, S.MailFromHost, S.RcptTo, S.RcptToHost, S.BeginDatum, S.EindDatum " +
@@ -1181,7 +1181,7 @@ namespace MonitoringService
                             "left outer join @SubstituteEmails S on T.ID = S.ID " +
                             "where isnull(S.ID, 0) = 0 ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure UndeliverableSubjectSync @NDRs as NDRs readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure UndeliverableSubjectSync @NDRs as NDRs readonly as " +
                             " " +
                             "insert UndeliverableSubjects(ID, [Subject], MailFrom) " +
                             "select S.ID, S.[Subject], S.MailFrom " +
@@ -1194,7 +1194,7 @@ namespace MonitoringService
                             "left outer join @NDRs S on T.ID = S.ID " +
                             "where isnull(S.ID, 0) = 0 ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure UserPreferencesSync @UserPreferences as UserPrefs readonly as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure UserPreferencesSync @UserPreferences as UserPrefs readonly as " +
                             " " +
                             "insert UserPreferences(ID, EmailAddress, NoNDRs, ForwardFreeMails) " +
                             "select S.ID, S.EmailAddress, S.NoNDRs, S.ForwardFreeMails " +
@@ -1207,7 +1207,7 @@ namespace MonitoringService
                             "left outer join @UserPreferences S on T.ID = S.ID " +
                             "where isnull(S.ID, 0) = 0 ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure VoegToeMailHeaders @MessageID bigint, @XMailer varchar(50), @XPriority varchar(50), @XMSMailPriority varchar(50), " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure VoegToeMailHeaders @MessageID bigint, @XMailer varchar(50), @XPriority varchar(50), @XMSMailPriority varchar(50), " +
                             "	@XMimeOLE varchar(50), @OriginatingHost varchar(255), @Keywords nvarchar(512) as " +
                             " " +
                             "UPDATE Mail  " +
@@ -1215,13 +1215,13 @@ namespace MonitoringService
                             "	OriginatingHost = @OriginatingHost, Keywords = @Keywords  " +
                             "WHERE MessageID = @MessageID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure VoegToeMailSubject @MessageID bigint, @Subject nvarchar(255) as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure VoegToeMailSubject @MessageID bigint, @Subject nvarchar(255) as " +
                             " " +
                             "UPDATE Mail  " +
                             "SET [Subject] = @Subject  " +
                             "WHERE MessageID = @MessageID ");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "create procedure WissenOvergezetteMails as " +
+                        GFS.SQL_SendQueryWithoutResponse("create procedure WissenOvergezetteMails as " +
                             " " +
                             "/* Bijwerken duidelijk mislukte mails */   " +
                             "UPDATE Mail  " +
@@ -1242,59 +1242,59 @@ namespace MonitoringService
                             "where datediff(hour, tijdstip, current_timestamp) > 1");
 
                         // Triggers en indexes
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX FakeMailAddresses_Email ON FakeMailAddresses " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX FakeMailAddresses_Email ON FakeMailAddresses " +
                             "( Email ASC )");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX GoodMailAddresses_Email ON GoodMailAddresses " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX GoodMailAddresses_Email ON GoodMailAddresses " +
                             "( Email ASC )");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX Mail_Status ON Mail " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX Mail_Status ON Mail " +
                             "( [Status] ASC )");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX Mail_Datum ON Mail " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX Mail_Datum ON Mail " +
                             "( [Datum] ASC )");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX Mail_PreChecked_MessageSize ON Mail " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX Mail_PreChecked_MessageSize ON Mail " +
                             "( PreChecked asc, MessageSize asc ) include (Datum)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX Mail_MessageSize_Status ON Mail " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX Mail_MessageSize_Status ON Mail " +
                             "( MessageSize asc, [Status] ASC )");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX Mail_Lots ON Mail " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX Mail_Lots ON Mail " +
                             "( MessageSize asc, [Status] ASC, MessageID asc, [ID] asc, [Busy] asc ) " +
                             "include ([MailFrom], [MailFromHost], [RcptTo], [RcptToHost], [Subject], [ServerName], [ServerIP], [ServerIPNum], [Datum], " +
                             "[IncomingServer], [Checksum], [PreChecked], [XMailer], [XPriority], [XMSMailPriority], [XMimeOLE], [OriginatingHost], [CommunicationsLog])");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX Mail_Busy ON Mail " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX Mail_Busy ON Mail " +
                             "( [Busy] ASC )");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX MailForwarded_Datum ON MailForwarded " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX MailForwarded_Datum ON MailForwarded " +
                             "( Datum asc ) include (DatumDoorgestuurd)");
 
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "CREATE NONCLUSTERED INDEX MailForwarded_DatumDoorgestuurd ON MailForwarded " +
+                        GFS.SQL_SendQueryWithoutResponse("CREATE NONCLUSTERED INDEX MailForwarded_DatumDoorgestuurd ON MailForwarded " +
                             "( DatumDoorgestuurd asc )");
 
                         // Create Alarm user
-                        AF.SQL_SendWithoutResponse(AlgemeneFuncties.conn, "sp_addlogin", new List<SqlParameter>() {
+                        GFS.SQL_SendWithoutResponse("sp_addlogin", new List<SqlParameter>() {
                             new SqlParameter(){ParameterName = "@loginame", SqlDbType = SqlDbType.VarChar, Size = 255, Value = "Alarm" },
                             new SqlParameter(){ParameterName = "@passwd", SqlDbType = SqlDbType.VarChar, Size = 255, Value = "Alertgeneral!!" },
                             new SqlParameter(){ParameterName = "@defdb", SqlDbType = SqlDbType.VarChar, Size = 255, Value = "Spamfilter" }});
 
-                        AF.SQL_SendWithoutResponse(AlgemeneFuncties.conn, "sp_grantdbaccess", new List<SqlParameter>() {
+                        GFS.SQL_SendWithoutResponse("sp_grantdbaccess", new List<SqlParameter>() {
                             new SqlParameter(){ParameterName = "@loginame", SqlDbType = SqlDbType.VarChar, Size = 255, Value = "Alarm" }});
 
                         // Set Rights for Alarm
-                        AF.SQL_SendQueryWithoutResponse(AlgemeneFuncties.conn, "GRANT EXECUTE ON HaalControleMetingen TO Alarm");
+                        GFS.SQL_SendQueryWithoutResponse("GRANT EXECUTE ON HaalControleMetingen TO Alarm");
 
 
                         // All set up: start sync
-                        AF.SQL_SendWithoutResponse(SQLconnRemote, "GeneralSettingsEnableServer");
+                        GFS.SQL_SendWithoutResponse(SQLconnRemote, "GeneralSettingsEnableServer");
                     }
                 }
             }
             catch (Exception eee)
             {
-                AF.LogError(eee, EventLogEntryType.FailureAudit, 2010032140, true);
+                GFS.LogError(eee, EventLogEntryType.FailureAudit, 2010032140, true);
             }
         }
 
@@ -1331,22 +1331,22 @@ namespace MonitoringService
                         {
                             if (!Processen.Contains("forwarding service v6"))
                             { // service stilgevallen, terug opzetten
-                                AF.LogError("Restarting the Forwarding Service, it was stoppped", EventLogEntryType.Warning, 2009282352, true);
+                                GFS.LogError("Restarting the Forwarding Service, it was stoppped", EventLogEntryType.Warning, 2009282352, true);
                                 using (ServiceController serviceControllerForwarding = new ServiceController("ForwardingService"))
                                 {
                                     if (serviceControllerForwarding.Status.ToString().ToLower() != "stopped")
                                     {
                                         serviceControllerForwarding.Stop();
-                                        AF.LogError("Stop command sent for Forwarding Service", EventLogEntryType.Warning, 2009282353, false);
+                                        GFS.LogError("Stop command sent for Forwarding Service", EventLogEntryType.Warning, 2009282353, false);
                                     }
                                     serviceControllerForwarding.Start();
                                 }
-                                AF.LogError("Start command sent for Forwarding Service", EventLogEntryType.Warning, 2009282354, false);
+                                GFS.LogError("Start command sent for Forwarding Service", EventLogEntryType.Warning, 2009282354, false);
                             }
                         }
                         catch (Exception eee)
                         {
-                            AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282355, true);
+                            GFS.LogError(eee, EventLogEntryType.FailureAudit, 2009282355, true);
                         }
                     }
 
@@ -1380,7 +1380,7 @@ namespace MonitoringService
                                             if (pp.ProcessName.ToLower() == "forwarding service v6")
                                             {
                                                 pp.Kill();
-                                                AF.LogError("Forwarding Service seems to hang, killing...", EventLogEntryType.FailureAudit, 2009282356, true);
+                                                GFS.LogError("Forwarding Service seems to hang, killing...", EventLogEntryType.FailureAudit, 2009282356, true);
                                                 break;
                                             }
                                         }
@@ -1392,34 +1392,34 @@ namespace MonitoringService
 
                         if (!Processen.Contains("forwarding service v6"))
                         { // service stilgevallen, terug opzetten
-                            AF.LogError("Restarting the Forwarding Service, it was stoppped", EventLogEntryType.Warning, 2009282359, true);
+                            GFS.LogError("Restarting the Forwarding Service, it was stoppped", EventLogEntryType.Warning, 2009282359, true);
                             using (ServiceController serviceControllerForwarding = new ServiceController("ForwardingService"))
                             {
                                 if (serviceControllerForwarding.Status.ToString().ToLower() != "stopped")
                                 {
                                     serviceControllerForwarding.Stop();
-                                    AF.LogError("Stop command sent for Forwarding Service", EventLogEntryType.Warning, 2009282357, false);
+                                    GFS.LogError("Stop command sent for Forwarding Service", EventLogEntryType.Warning, 2009282357, false);
                                 }
                                 serviceControllerForwarding.Start();
                             }
-                            AF.LogError("Start command sent for Forwarding Service", EventLogEntryType.Warning, 2009282358, false);
+                            GFS.LogError("Start command sent for Forwarding Service", EventLogEntryType.Warning, 2009282358, false);
                         }
 
                         if (Environment.MachineName.ToLower() == "yoda")
                         {
                             if (!Processen.Contains("sqlagent"))
                             { // service stilgevallen, terug opzetten
-                                AF.LogError("Restarting the SQL Agent, it was stoppped", EventLogEntryType.Warning, 2009290000, true);
+                                GFS.LogError("Restarting the SQL Agent, it was stoppped", EventLogEntryType.Warning, 2009290000, true);
                                 using (ServiceController serviceControllerSQLAgent = new ServiceController("sqlserveragent"))
                                 {
                                     if (serviceControllerSQLAgent.Status.ToString().ToLower() != "stopped")
                                     {
                                         serviceControllerSQLAgent.Stop();
-                                        AF.LogError("Stop command sent for SQL Agent", EventLogEntryType.Warning, 2009290001, false);
+                                        GFS.LogError("Stop command sent for SQL Agent", EventLogEntryType.Warning, 2009290001, false);
                                     }
                                     serviceControllerSQLAgent.Start();
                                 }
-                                AF.LogError("Start command sent for SQL Agent", EventLogEntryType.Warning, 2009290002, false);
+                                GFS.LogError("Start command sent for SQL Agent", EventLogEntryType.Warning, 2009290002, false);
                             }
                         }
 
@@ -1427,29 +1427,29 @@ namespace MonitoringService
                         {
                             if (!Processen.Contains("incoming service v6"))
                             { // service stilgevallen, terug opzetten
-                                AF.LogError("Restarting the Incoming Service, it was stoppped", EventLogEntryType.Warning, 2009290003, true);
+                                GFS.LogError("Restarting the Incoming Service, it was stoppped", EventLogEntryType.Warning, 2009290003, true);
                                 using (ServiceController serviceControllerIncoming = new ServiceController("IncomingService"))
                                 {
                                     if (serviceControllerIncoming.Status.ToString().ToLower() != "stopped")
                                     {
                                         serviceControllerIncoming.Stop();
-                                        AF.LogError("Stop command sent for Incoming Service", EventLogEntryType.Warning, 2009290004, false);
+                                        GFS.LogError("Stop command sent for Incoming Service", EventLogEntryType.Warning, 2009290004, false);
                                     }
                                     serviceControllerIncoming.Start();
                                 }
-                                AF.LogError("Start command sent for Incoming Service", EventLogEntryType.Warning, 2009290005, false);
+                                GFS.LogError("Start command sent for Incoming Service", EventLogEntryType.Warning, 2009290005, false);
                             }
                             else if (IncomingMemoryUsed > (Int64)(12 * 1024) * (Int64)1024 * (Int64)1024)
                             {
                                 StopIncomingService();
-                                AF.LogError("Stoppnig Incoming Service, more than 12GB in use", EventLogEntryType.Warning, 2009290006, false);
+                                GFS.LogError("Stoppnig Incoming Service, more than 12GB in use", EventLogEntryType.Warning, 2009290006, false);
                             }
                         }
                         if (OpenConnecties > 200 && !OpenConnectiesGereageerd)
                         {
                             OpenConnectiesGereageerd = true;
                             StopIncomingService();
-                            AF.LogError("Restarting Incoming Service, too many unfinished connections", EventLogEntryType.Warning, 2009290008, false);
+                            GFS.LogError("Restarting Incoming Service, too many unfinished connections", EventLogEntryType.Warning, 2009290008, false);
                         }
                         else if (OpenConnecties < 200)
                         {
@@ -1461,7 +1461,7 @@ namespace MonitoringService
                             if ((DateTime.UtcNow - CheckLastMailReceived).TotalSeconds > 600)
                             {
                                 StopIncomingService();
-                                AF.LogError("Restarting Incoming Service, no mail in a long time", EventLogEntryType.Warning, 2010071121, false);
+                                GFS.LogError("Restarting Incoming Service, no mail in a long time", EventLogEntryType.Warning, 2010071121, false);
                                 CheckIncomingStarting = true;
                             }
                             else if ((DateTime.UtcNow - CheckLastMailReceived).TotalSeconds > 300)
@@ -1473,7 +1473,7 @@ namespace MonitoringService
                                         using (SmtpClient Server = new SmtpClient("localhost"))
                                         using (MailMessage Message = new MailMessage($"{Environment.MachineName.ToLower()}@spamfilter.be", "internal.test@spamfilter.be", DateTime.UtcNow.ToBinary().ToString(), "Test mail. content unimportant"))
                                         {
-                                            AF.LogError($"Long time no incoming mails. Sending test mail to internal.test@spamfilter.be from {Environment.MachineName.ToLower()}@spamfilter.be using localhost", 
+                                            GFS.LogError($"Long time no incoming mails. Sending test mail to internal.test@spamfilter.be from {Environment.MachineName.ToLower()}@spamfilter.be using localhost", 
                                                 EventLogEntryType.Information, 2012231227, true);
                                             Server.Send(Message);
                                         }
@@ -1481,7 +1481,7 @@ namespace MonitoringService
                                     }
                                     catch (Exception eee)
                                     {
-                                        AF.LogError(eee, EventLogEntryType.FailureAudit, 2012022118, true);
+                                        GFS.LogError(eee, EventLogEntryType.FailureAudit, 2012022118, true);
                                     }
                                 }
                             }
@@ -1497,7 +1497,7 @@ namespace MonitoringService
                             {
                                 StopForwardingService();
                                 ControleerDoorsturenOp = DateTime.Now.AddMinutes(10);
-                                AF.LogError("Stopping Forwarding Service, no mails forwarded in over an hour.", EventLogEntryType.Warning, 2010071126, false);
+                                GFS.LogError("Stopping Forwarding Service, no mails forwarded in over an hour.", EventLogEntryType.Warning, 2010071126, false);
                                 CheckForwardingStarting = true;
                             }
                             else if ((DateTime.UtcNow - CheckLastMailForwarded).TotalSeconds > 300)
@@ -1509,7 +1509,7 @@ namespace MonitoringService
                                         using (SmtpClient Server = new SmtpClient("localhost"))
                                         using (MailMessage Message = new MailMessage($"{Environment.MachineName.ToLower()}@spamfilter.be", "internal.test@spamfilter.be", DateTime.UtcNow.ToBinary().ToString(), "Test mail. content unimportant"))
                                         {
-                                            AF.LogError($"Long time no outgoing mails. Sending test mail to internal.test@spamfilter.be from {Environment.MachineName.ToLower()}@spamfilter.be using localhost",
+                                            GFS.LogError($"Long time no outgoing mails. Sending test mail to internal.test@spamfilter.be from {Environment.MachineName.ToLower()}@spamfilter.be using localhost",
                                                 EventLogEntryType.Information, 2012231120, true);
                                             Server.Send(Message);
                                         }
@@ -1517,7 +1517,7 @@ namespace MonitoringService
                                     }
                                     catch (Exception eee)
                                     {
-                                        AF.LogError(eee, EventLogEntryType.FailureAudit, 2012022117, true);
+                                        GFS.LogError(eee, EventLogEntryType.FailureAudit, 2012022117, true);
                                     }
                                 }
                             }
@@ -1529,7 +1529,7 @@ namespace MonitoringService
                     }
                     catch (Exception eee)
                     {
-                        AF.LogError(eee, EventLogEntryType.FailureAudit, 2009290009, true);
+                        GFS.LogError(eee, EventLogEntryType.FailureAudit, 2009290009, true);
                     }
 
                     if (Environment.MachineName.ToLower() != "yoda")
@@ -1538,7 +1538,7 @@ namespace MonitoringService
                         {
                             try
                             {
-                                object objTime = AF.SQL_SendQueryWithObjectResponse(SQLconnRemote, "select CURRENT_TIMESTAMP");
+                                object objTime = GFS.SQL_SendQueryWithObjectResponse(SQLconnRemote, "select CURRENT_TIMESTAMP");
 
                                 if (objTime != null)
                                 {
@@ -1556,13 +1556,13 @@ namespace MonitoringService
 
                                         Process ns = Process.Start(info);
 
-                                        AF.LogError($"Updated the time using : {info.FileName} {info.Arguments}", EventLogEntryType.Information, 20092333, true);
+                                        GFS.LogError($"Updated the time using : {info.FileName} {info.Arguments}", EventLogEntryType.Information, 20092333, true);
                                     }
                                 }
                             }
                             catch (Exception eee)
                             {
-                                AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282335, true);
+                                GFS.LogError(eee, EventLogEntryType.FailureAudit, 2009282335, true);
                             }
                         }
                     }
@@ -1571,25 +1571,25 @@ namespace MonitoringService
                     {
                         try
                         {
-                            OpenConnecties = AF.intParse(AF.SQL_SendQueryWithObjectResponse(AlgemeneFuncties.conn, "select count(*) from mail where status = 'recv'"));
+                            OpenConnecties = GF.IntParse(GFS.SQL_SendQueryWithObjectResponse("select count(*) from mail where status = 'recv'"));
                         }
                         catch (Exception eee)
                         {
-                            AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282345, true);
+                            GFS.LogError(eee, EventLogEntryType.FailureAudit, 2009282345, true);
                         }
 
                         try
                         {
-                            AF.SQL_SendWithoutResponse(AlgemeneFuncties.conn, "WissenOvergezetteMails");
+                            GFS.SQL_SendWithoutResponse("WissenOvergezetteMails");
                         }
                         catch (Exception eee)
                         {
-                            AF.LogError(eee, EventLogEntryType.FailureAudit, 2010032127, true);
+                            GFS.LogError(eee, EventLogEntryType.FailureAudit, 2010032127, true);
                         }
 
                         try
                         {
-                            DataTable dtResult = AF.SQL_SendWithDirectDataTableResponse(AlgemeneFuncties.conn, "PerformanceGet");
+                            DataTable dtResult = GFS.SQL_SendWithDirectDataTableResponse("PerformanceGet");
                             if (dtResult.Rows.Count > 0)
                             {
                                 CheckIncomingStarting = (bool)dtResult.Rows[0]["IncomingStarting"];
@@ -1600,13 +1600,13 @@ namespace MonitoringService
                         }
                         catch (Exception eee)
                         {
-                            AF.LogError(eee, EventLogEntryType.FailureAudit, 2010032127, true);
+                            GFS.LogError(eee, EventLogEntryType.FailureAudit, 2010032127, true);
                         }
                     }
                 }
                 catch (Exception eee)
                 {
-                    AF.LogError(eee, EventLogEntryType.FailureAudit, 2009282320, true);
+                    GFS.LogError(eee, EventLogEntryType.FailureAudit, 2009282320, true);
                 }
 
                 Thread.Sleep(10000);
@@ -1635,7 +1635,7 @@ namespace MonitoringService
                 if (pp.ProcessName.ToLower() == "incoming service v6")
                 {
                     pp.Kill();
-                    AF.LogError("Incoming Service is stuck, killing...", EventLogEntryType.FailureAudit, 2010081446, true);
+                    GFS.LogError("Incoming Service is stuck, killing...", EventLogEntryType.FailureAudit, 2010081446, true);
                     break;
                 }
             }
@@ -1662,7 +1662,7 @@ namespace MonitoringService
                 if (pp.ProcessName.ToLower() == "forwarding service v6")
                 {
                     pp.Kill();
-                    AF.LogError("Forwarding Service is stuck, killing...", EventLogEntryType.FailureAudit, 2010081451, true);
+                    GFS.LogError("Forwarding Service is stuck, killing...", EventLogEntryType.FailureAudit, 2010081451, true);
                     break;
                 }
             }
