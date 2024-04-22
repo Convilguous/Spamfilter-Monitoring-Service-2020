@@ -584,57 +584,6 @@ namespace MonitoringService
                             "select MXRecord, [Port] " +
                             "from @MXRecords");
 
-                        GFS.SQL_SendQueryWithoutResponse("create procedure GetStatisticsHost as " +
-                            " " +
-                            "declare @TempStats as table( " +
-                            " Forwarded bigint, " +
-                            " Blocked bigint, " +
-                            " SpamFailed bigint, " +
-                            " RealFailed bigint, " +
-                            " ToBechecked bigint, " +
-                            " Allowed bigint, " +
-                            " Tijdstip int " +
-                            ") " +
-                            " " +
-                            "insert @TempStats (Forwarded, Blocked, SpamFailed, RealFailed, ToBeChecked, Allowed, TijdStip) " +
-                            "select 0, count(*),0,0, 0,0, datediff(second,datum, current_timestamp)/3600 " +
-                            "from Mail " +
-                            "where Status = 'BLOCK' " +
-                            "group by datediff(second,datum, current_timestamp)/3600 " +
-                            " " +
-                            "UNION ALL " +
-                            " " +
-                            "select 0 ,0, 0, 0,count(*),0, datediff(second,datum, current_timestamp)/3600 " +
-                            "from Mail " +
-                            "where Status = '' " +
-                            "group by datediff(second,datum, current_timestamp)/3600 " +
-                            " " +
-                            "UNION ALL " +
-                            " " +
-                            "select 0 ,0, 0, count(*),0,0, datediff(second,datum, current_timestamp)/3600 " +
-                            "from Mail " +
-                            "where Status = 'FAIL' and MessageSize = 0 " +
-                            "group by datediff(second,datum, current_timestamp)/3600 " +
-                            " " +
-                            "UNION ALL " +
-                            " " +
-                            "select 0 ,0, count(*),0,0,0, datediff(second,datum, current_timestamp)/3600 " +
-                            "from Mail " +
-                            "where Status = 'FAIL' and MessageSize <> 0 " +
-                            "group by datediff(second,datum, current_timestamp)/3600 " +
-                            " " +
-                            "UNION ALL " +
-                            " " +
-                            "select count(*), 0,0,0, 0,0, datediff(second,datum, current_timestamp)/3600 " +
-                            "from mailforwarded " +
-                            "group by datediff(second,datum, current_timestamp)/3600 " +
-                            " " +
-                            "select sum(Forwarded) as Forwarded, sum(Blocked) as Blocked, sum(SpamFailed) as SpamFailed, sum(RealFailed) as RealFailed,  " +
-                            "	sum(ToBeChecked) as ToBeChecked, sum(Allowed) as Allowed, TijdStip " +
-                            "from @TempStats " +
-                            "where tijdstip < 480 " +
-                            "group by TijdStip ");
-
                         GFS.SQL_SendQueryWithoutResponse("create procedure GoodMailAddressesAddBulk @GoodMailAddressesList as MailAddresses readonly as " +
                             " " +
                             "insert GoodMailAddresses(ID, Email, Beheerder, ListedSince) " +
@@ -1132,7 +1081,11 @@ namespace MonitoringService
                             "(select count(*) from MailForwarded) as [Forwarded], " +
                             "(select count(*) from Mail where UsingTLS = 1)+(select count(*) from MailForwarded where UsingTLS = 1) as [TLS], " +
                             "(select count(*) from Mail where UsingTLS = 0)+(select count(*) from MailForwarded where UsingTLS = 0) as [NonTLS], " +
-                            "IncomingProgress " +
+                            "IncomingProgress, " +
+                            "(select count(*) from MailContent) as MailContentItems, " +
+                            "isnull((select min(datum) from MailContent), GETUTCDATE()) as MailContentOldest, " +
+                            "isnull((select max(datum) from MailContent), GETUTCDATE()) as MailContentYoungest, " +
+                            "isnull((select sum(DATALENGTH(BodyBinary)) from MailContent), 0) as MailContentSize " +
                             "from Performance ");
 
                         GFS.SQL_SendQueryWithoutResponse("create procedure PerformanceUpdateProgress @ID bigint as " +
